@@ -71,6 +71,50 @@ export default function Dashboard() {
 
   const alertCount = items.filter((i) => getStockStatus(i) !== "ok").length;
 
+  const renderRow = (item: Item) => {
+    const status = getStockStatus(item);
+    return (
+      <div key={item.id} className="flex items-center gap-4 px-4 py-3">
+        <div className={`w-1 self-stretch rounded-full flex-shrink-0 ${
+          status === "ok" ? "bg-green-400" : status === "low" ? "bg-yellow-400" : "bg-red-500"
+        }`} />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {[item.size, item.printer].filter(Boolean).join(" · ")}
+          </p>
+        </div>
+        <div className="text-right flex-shrink-0">
+          <p className="text-sm font-semibold text-gray-900">
+            {item.current_stock} <span className="font-normal text-gray-400 text-xs">{item.unit}</span>
+          </p>
+          <p className="text-xs text-gray-400">min {item.low_stock_threshold}</p>
+        </div>
+        <StatusBadge status={status} />
+        <div className="flex gap-2 flex-shrink-0">
+          <button
+            onClick={() => setModal({ type: "stock", item })}
+            className="text-xs border rounded-lg px-2 py-1 text-gray-600 hover:bg-gray-50"
+          >
+            Update
+          </button>
+          <button
+            onClick={() => setModal({ type: "edit", item })}
+            className="text-xs border rounded-lg px-2 py-1 text-gray-600 hover:bg-gray-50"
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => deleteItem(item.id)}
+            className="text-xs border rounded-lg px-2 py-1 text-red-500 hover:bg-red-50"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -131,66 +175,40 @@ export default function Dashboard() {
             </p>
           </div>
         ) : (
-          Object.entries(grouped).map(([category, categoryItems]) => (
-            <section key={category}>
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                {category}
-              </h2>
-              <div className="bg-white rounded-xl border divide-y">
-                {categoryItems.map((item) => {
-                  const status = getStockStatus(item);
-                  return (
-                    <div key={item.id} className="flex items-center gap-4 px-4 py-3">
-                      {/* Status stripe */}
-                      <div className={`w-1 self-stretch rounded-full flex-shrink-0 ${
-                        status === "ok" ? "bg-green-400" : status === "low" ? "bg-yellow-400" : "bg-red-500"
-                      }`} />
+          Object.entries(grouped).map(([category, categoryItems]) => {
+            const printers = category === "Ink Cartridges"
+              ? [...new Set(categoryItems.map(i => i.printer).filter(Boolean) as string[])].sort()
+              : [];
 
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {[item.size, item.printer].filter(Boolean).join(" · ")}
-                        </p>
+            return (
+              <section key={category}>
+                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                  {category}
+                </h2>
+                {printers.length > 0 ? (
+                  <div className="space-y-4">
+                    {printers.map(printer => (
+                      <div key={printer}>
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{printer}</p>
+                        <div className="bg-white rounded-xl border divide-y">
+                          {categoryItems.filter(i => i.printer === printer).map(renderRow)}
+                        </div>
                       </div>
-
-                      {/* Stock */}
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-sm font-semibold text-gray-900">
-                          {item.current_stock} <span className="font-normal text-gray-400 text-xs">{item.unit}</span>
-                        </p>
-                        <p className="text-xs text-gray-400">min {item.low_stock_threshold}</p>
+                    ))}
+                    {categoryItems.filter(i => !i.printer).length > 0 && (
+                      <div className="bg-white rounded-xl border divide-y">
+                        {categoryItems.filter(i => !i.printer).map(renderRow)}
                       </div>
-
-                      <StatusBadge status={status} />
-
-                      {/* Actions */}
-                      <div className="flex gap-2 flex-shrink-0">
-                        <button
-                          onClick={() => setModal({ type: "stock", item })}
-                          className="text-xs border rounded-lg px-2 py-1 text-gray-600 hover:bg-gray-50"
-                        >
-                          Update
-                        </button>
-                        <button
-                          onClick={() => setModal({ type: "edit", item })}
-                          className="text-xs border rounded-lg px-2 py-1 text-gray-600 hover:bg-gray-50"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => deleteItem(item.id)}
-                          className="text-xs border rounded-lg px-2 py-1 text-red-500 hover:bg-red-50"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          ))
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-xl border divide-y">
+                    {categoryItems.map(renderRow)}
+                  </div>
+                )}
+              </section>
+            );
+          })
         )}
       </main>
 
